@@ -118,6 +118,7 @@
       delete navActions.dataset.logged;
       wireButtons();
     }
+    window.dispatchEvent(new CustomEvent('chookee:session'));
   }
 
   /* ---------- form submit ---------- */
