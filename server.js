@@ -7,7 +7,7 @@ const store = require('./lib/store');
 /* Verify Supabase connectivity on startup (non-blocking) */
 if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
   store.initSupabase().then(function () {
-    console.log('Supabase: connected, storage bucket "app_data" ready.');
+    console.log('Supabase: connected, table "app_data" is accessible.');
   }).catch(function (e) {
     console.error('Supabase: ' + e.message);
   });

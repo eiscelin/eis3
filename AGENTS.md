@@ -16,18 +16,22 @@ Static marketing page + franchisee dashboard for Chookee Inasal. Frontend is van
 - `auth.js` dispatches a `chookee:session` window event on login/logout; `dashboard.js` listens to it to mount/unmount the dashboard. Marketing page sections are hidden via `body.dash-mode` CSS.
 
 ## Supabase (primary production storage)
-- Secrets: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (from Supabase dashboard → Settings → API). Delivered via `/run/base44/app.env` (wired in compose as `env_file`).
+- Secrets: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (from Supabase dashboard → Settings → API; both publishable `sb_publishable_…` and secret `sb_secret_…` keys work because the RLS policy allows anon). Delivered via `/run/base44/app.env` (wired in compose as `env_file`).
 - `lib/store.js` uses the Supabase PostgREST API against an `app_data` table (key-value with JSONB). Priority: Supabase → Vercel KV → local JSON file.
-- Required SQL (run once in Supabase SQL Editor):
+- Required SQL (run once in Supabase SQL Editor — safe to re-run):
   ```sql
   CREATE TABLE IF NOT EXISTS app_data (
     key TEXT PRIMARY KEY,
     value JSONB
   );
   ALTER TABLE app_data ENABLE ROW LEVEL SECURITY;
+  DROP POLICY IF EXISTS "app_data_full_access" ON app_data;
+  CREATE POLICY "app_data_full_access" ON app_data
+    FOR ALL TO anon, authenticated
+    USING (true) WITH CHECK (true);
   ```
-- RLS enabled with no policies: anon key is blocked; the service_role key bypasses RLS.
-- Server logs a startup check: `Supabase: connected, table "app_data" is accessible.` — a 404 means the SQL hasn't been run yet.
+- The permissive policy is what makes the publishable key work; the app's API is the only consumer of the key (it lives server-side, never in the browser).
+- Server logs a startup check: `Supabase: connected, table "app_data" is accessible.` — an error means the SQL hasn't been run yet.
 
 ## Vercel deployment
 - `api/[[...slug]].js` is a catch-all serverless function that delegates to the Express app in `server.js`.
