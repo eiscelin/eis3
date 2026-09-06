@@ -1,6 +1,5 @@
 (function () {
   var SESSION_KEY = 'chookee_session';
-  var DATA_PREFIX = 'chookee_dash_';
   var ROYALTY_RATE = 0.05;
   var LOGO = 'https://media.base44.com/images/public/6a5f4191b1d0b2ff4c467b0a/867435e10_ChatGPTImageAug28202603_34_51PM1.png';
 
@@ -142,14 +141,28 @@
   }
 
   /* ---------- data ---------- */
-  function loadData(u) {
-    var raw = localStorage.getItem(DATA_PREFIX + u);
-    if (raw) { try { return JSON.parse(raw); } catch (e) { /* reseed */ } }
+  async function loadData(u) {
+    try {
+      var res = await fetch('/api/data/' + encodeURIComponent(u));
+      var json = await res.json();
+      if (json.ok && json.data) return json.data;
+    } catch (e) { /* network error — fall through to seed */ }
     var d = seed(u);
-    saveData(d);
+    fetch('/api/data/' + encodeURIComponent(u), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(d)
+    }).catch(function () {});
     return d;
   }
-  function saveData() { localStorage.setItem(DATA_PREFIX + user, JSON.stringify(data)); }
+  function saveData() {
+    if (!user || !data) return;
+    fetch('/api/data/' + encodeURIComponent(user), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).catch(function (e) { console.error('Save failed:', e); });
+  }
 
   function seed(u) {
     var now = new Date();
@@ -430,18 +443,19 @@
     if (activeTab === 'orders') renderDraft();
   }
 
-  function mount() {
+  async function mount() {
     var session = localStorage.getItem(SESSION_KEY);
     if (!session) { unmount(); return; }
     var wasMounted = !!root;
     user = session;
-    data = loadData(user);
     if (!root) {
       root = document.createElement('div');
       root.className = 'dash-root';
       document.body.appendChild(root);
     }
     document.body.classList.add('dash-mode');
+    root.innerHTML = '<div style="display:grid;place-items:center;min-height:100vh;color:#888;font-weight:700">Loading dashboard…</div>';
+    data = await loadData(user);
     if (!wasMounted) activeTab = 'overview';
     root.innerHTML = buildShell();
     renderView();
