@@ -35,6 +35,7 @@ Static marketing page + franchisee dashboard for Chookee Inasal. Frontend is van
 
 ## Vercel deployment
 - `api/[[...slug]].js` is a catch-all serverless function that delegates to the Express app in `server.js`.
+- `vercel.json` explicitly registers the function (`functions` key) — without it, the deployment can ship static files only and every `/api/*` route 404s (browser shows "Network error" in the auth modal).
 - Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the Vercel project env vars.
 - Supabase has replaced the need for Vercel KV (which is deprecated); the KV code path remains only as a fallback.
 
