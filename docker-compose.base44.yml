@@ -8,6 +8,8 @@ services:
       - .:/app
       - /app/node_modules
     command: sh -c "npm install --no-audit --no-fund && npm run dev"
+    env_file:
+      - /run/base44/app.env
     environment:
       - PORT=3000
     healthcheck:

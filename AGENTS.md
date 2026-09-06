@@ -15,10 +15,24 @@ Static marketing page + franchisee dashboard for Chookee Inasal. Frontend is van
 - **Storage**: `lib/store.js` uses a local JSON file (`data.json`, gitignored) in dev. On Vercel it uses `@vercel/kv` (Redis) when `KV_REST_API_URL` is set.
 - `auth.js` dispatches a `chookee:session` window event on login/logout; `dashboard.js` listens to it to mount/unmount the dashboard. Marketing page sections are hidden via `body.dash-mode` CSS.
 
+## Supabase (primary production storage)
+- Secrets: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (from Supabase dashboard → Settings → API). Delivered via `/run/base44/app.env` (wired in compose as `env_file`).
+- `lib/store.js` uses the Supabase PostgREST API against an `app_data` table (key-value with JSONB). Priority: Supabase → Vercel KV → local JSON file.
+- Required SQL (run once in Supabase SQL Editor):
+  ```sql
+  CREATE TABLE IF NOT EXISTS app_data (
+    key TEXT PRIMARY KEY,
+    value JSONB
+  );
+  ALTER TABLE app_data ENABLE ROW LEVEL SECURITY;
+  ```
+- RLS enabled with no policies: anon key is blocked; the service_role key bypasses RLS.
+- Server logs a startup check: `Supabase: connected, table "app_data" is accessible.` — a 404 means the SQL hasn't been run yet.
+
 ## Vercel deployment
 - `api/[[...slug]].js` is a catch-all serverless function that delegates to the Express app in `server.js`.
-- Create a **Vercel KV** store in the Vercel project settings — this auto-sets `KV_REST_API_URL` and `KV_REST_API_TOKEN` env vars. Without KV, the serverless functions cannot persist data.
-- `@vercel/kv` is an `optionalDependencies` entry (not needed for local dev).
+- Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the Vercel project env vars.
+- Supabase has replaced the need for Vercel KV (which is deprecated); the KV code path remains only as a fallback.
 
 ## Verification
 - `curl -sf http://localhost:3000/` returns the HTML page.
