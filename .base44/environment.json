@@ -2,5 +2,11 @@
   "previewPort": 3000,
   "healthPath": "/",
   "startCommand": "docker compose -f docker-compose.base44.yml up -d",
-  "secrets": []
+  "secrets": [
+    {
+      "name": "VERCEL_TOKEN",
+      "description": "Team-scoped Vercel API token (team eis7) — used to deploy/fix the production deployment at eis3.vercel.app",
+      "requiredAtBoot": false
+    }
+  ]
 }

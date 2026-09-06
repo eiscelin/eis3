@@ -34,10 +34,24 @@ Static marketing page + franchisee dashboard for Chookee Inasal. Frontend is van
 - Server logs a startup check: `Supabase: connected, table "app_data" is accessible.` — an error means the SQL hasn't been run yet.
 
 ## Vercel deployment
-- `api/[[...slug]].js` is a catch-all serverless function that delegates to the Express app in `server.js`.
-- `vercel.json` explicitly registers the function (`functions` key) — without it, the deployment can ship static files only and every `/api/*` route 404s (browser shows "Network error" in the auth modal).
-- Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the Vercel project env vars.
+- Project: `eis3` (team `eis7` / `team_aKNTFdRnFK1LVynW6NoDDxzW`), git-connected to `eiscelin/eis3`, production branch `main`, live at https://eis3.vercel.app.
+- `api/index.js` is the serverless function; `vercel.json` rewrites `/api/(.*)` → `/api` (the function receives the ORIGINAL path in `req.url`, so Express routes like `/api/auth/login` match directly).
+- **Do not use a catch-all file named `api/[[...slug]].js` on this project.** It builds and deploys fine, but Vercel's router never matched it — every `/api/*` request returned the platform 404 ("Network error" in the auth modal) even on fresh/prebuilt deployments. Verified by experiment: a plain-named function (`api/ping.js`) routed fine while the bracket-named catch-all 404'd in the same deployment.
+- The `functions` key in vercel.json only sets config (maxDuration) — it does NOT force a function to be built/routed.
+- Env vars on the Vercel project: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (production + preview). Without them the function falls back to local-file storage, which is read-only on Vercel → signups fail with "Server error".
 - Supabase has replaced the need for Vercel KV (which is deprecated); the KV code path remains only as a fallback.
+
+## Deploying to Vercel from the sandbox
+- `VERCEL_TOKEN` is a team-scoped token (env var name in `/run/base44/app.env`); the raw value may contain quotes — strip them before use.
+- The REST API works with `?teamId=team_aKNTFdRnFK1LVynW6NoDDxzW` on every call; project id `prj_bcn653evYbeJk56MDsQ5nqiTD1d1`.
+- The CLI fails on `vercel whoami`/`link` ("User not found" — token has no user scope) but works with CI env vars:
+  ```bash
+  docker compose -f docker-compose.base44.yml exec -T \
+    -e VERCEL_TOKEN="$VT" -e VERCEL_ORG_ID=team_aKNTFdRnFK1LVynW6NoDDxzW \
+    -e VERCEL_PROJECT_ID=prj_bcn653evYbeJk56MDsQ5nqiTD1d1 \
+    web sh -c 'cd <copy-of-repo> && vercel build --prod && vercel deploy --prebuilt --prod'
+  ```
+- Or trigger a fresh git deployment via `POST /v13/deployments?skipAutoDetectionConfirmation=1` with `{name:"eis3", project, target:"production", gitSource:{type:"github", org:"eiscelin", repo:"eis3", ref:"main"}}`.
 
 ## Verification
 - `curl -sf http://localhost:3000/` returns the HTML page.
