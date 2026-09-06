@@ -1,11 +1,5 @@
 (function () {
-  var USERS_KEY = 'chookee_users';
   var SESSION_KEY = 'chookee_session';
-
-  function getUsers() {
-    try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }
-    catch (e) { return {}; }
-  }
 
   /* ---------- styles ---------- */
   var style = document.createElement('style');
@@ -122,28 +116,34 @@
   }
 
   /* ---------- form submit ---------- */
-  form.addEventListener('submit', function (e) {
+  form.addEventListener('submit', async function (e) {
     e.preventDefault();
     var username = user.value.trim();
     var password = pass.value;
     if (!username) return showError('Please enter a username.');
     if (password.length < 4) return showError('Password must be at least 4 characters.');
-    var users = getUsers();
-    if (mode === 'signup') {
-      if (users[username]) return showError('That username is already taken. Try another.');
-      users[username] = password;
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    submit.disabled = true;
+    var orig = submit.textContent;
+    submit.textContent = 'Please wait…';
+    try {
+      var res = await fetch('/api/auth/' + mode, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+      });
+      var json = await res.json();
+      if (!json.ok) { showError(json.error); return; }
       localStorage.setItem(SESSION_KEY, username);
       close();
       renderHeader();
-      showToast('Welcome, ' + username + '! Account created.');
-    } else {
-      if (!users[username]) return showError('No account found for that username.');
-      if (users[username] !== password) return showError('Incorrect password. Please try again.');
-      localStorage.setItem(SESSION_KEY, username);
-      close();
-      renderHeader();
-      showToast('Welcome back, ' + username + '!');
+      showToast(mode === 'signup'
+        ? 'Welcome, ' + username + '! Account created.'
+        : 'Welcome back, ' + username + '!');
+    } catch (err) {
+      showError('Network error. Please try again.');
+    } finally {
+      submit.disabled = false;
+      submit.textContent = orig;
     }
   });
 

@@ -1,14 +1,17 @@
 services:
   web:
-    image: nginx:alpine
+    image: node:22-slim
+    working_dir: /app
     ports:
-      - "3000:80"
+      - "3000:3000"
     volumes:
-      - ./index.html:/usr/share/nginx/html/index.html:ro
-      - ./auth.js:/usr/share/nginx/html/auth.js:ro
-      - ./dashboard.js:/usr/share/nginx/html/dashboard.js:ro
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npm install --no-audit --no-fund && npm run dev"
+    environment:
+      - PORT=3000
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/',r=>process.exit(r.statusCode<400?0:1)).on('error',()=>process.exit(1))"]
       interval: 10s
-      timeout: 3s
-      retries: 5
+      timeout: 5s
+      retries: 6
