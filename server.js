@@ -6,16 +6,10 @@ const store = require('./lib/store');
 
 /* Verify Supabase connectivity on startup (non-blocking) */
 if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  fetch(process.env.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/app_data?select=key&limit=1', {
-    headers: {
-      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: 'Bearer ' + process.env.SUPABASE_SERVICE_ROLE_KEY
-    }
-  }).then(function (res) {
-    if (res.ok) console.log('Supabase: connected, table "app_data" is accessible.');
-    else console.error('Supabase: table "app_data" NOT accessible (HTTP ' + res.status + '). Run the setup SQL in the Supabase SQL Editor.');
+  store.initSupabase().then(function () {
+    console.log('Supabase: connected, storage bucket "app_data" ready.');
   }).catch(function (e) {
-    console.error('Supabase: connection failed —', e.message);
+    console.error('Supabase: ' + e.message);
   });
 }
 
